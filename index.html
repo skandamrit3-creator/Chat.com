@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101713">
+<title>Chat.com — Development Preview</title>
+<style>
+:root{color-scheme:dark;--bg:#0b100e;--panel:#111a16;--panel2:#17221c;--line:#26352c;--muted:#91a397;--text:#edf5ef;--green:#70e0a0;--green2:#2dbb72;--gold:#e7c77a;--red:#ff8181;--shadow:0 18px 60px #0005}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 55% -20%,#1b3929 0,transparent 42%),var(--bg);color:var(--text);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+button,input{font:inherit}button{cursor:pointer;color:inherit}.app{height:100dvh;min-height:600px;display:grid;grid-template-columns:76px 330px minmax(340px,1fr) 280px;gap:1px;background:var(--line);padding:1px}
+.rail,.chats,.conversation,.inspector{background:var(--panel);min-height:0}.rail{display:flex;align-items:center;flex-direction:column;padding:18px 10px;gap:13px}.brand{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#9af1b8,#2a9d62);color:#092013;display:grid;place-items:center;font-weight:900;font-size:19px;box-shadow:0 8px 24px #2dbb7240;margin-bottom:24px}.rail-btn{width:46px;height:46px;border:0;border-radius:15px;background:transparent;color:#9eafa4;font-size:18px;display:grid;place-items:center;position:relative}.rail-btn.active,.rail-btn:hover{background:#20382a;color:var(--green)}.rail-btn.active:before{content:"";position:absolute;left:-10px;height:22px;width:3px;border-radius:3px;background:var(--green)}.rail-spacer{flex:1}.avatar{width:35px;height:35px;border-radius:50%;display:grid;place-items:center;background:#30483a;color:#c8f4d6;font-weight:700}
+.chats{display:flex;flex-direction:column;padding:24px 18px 14px;min-width:0}.eyebrow{color:var(--green);font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase}.chats-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 18px}.chats-head h1{font-size:25px;letter-spacing:-1px;margin:0}.icon-btn{border:1px solid var(--line);background:var(--panel2);width:36px;height:36px;border-radius:12px;color:#c5d5ca}.search{display:flex;gap:9px;align-items:center;padding:11px 13px;border:1px solid var(--line);background:#0d1511;border-radius:13px;color:var(--muted);margin-bottom:18px}.search input{background:transparent;border:0;outline:0;color:var(--text);width:100%;min-width:0}.section-label{font-size:10px;color:#718277;letter-spacing:1.5px;font-weight:800;margin:7px 0 10px}.chat-list{overflow:auto;min-height:0}.chat-item{display:flex;align-items:center;gap:11px;padding:12px 10px;border-radius:14px;cursor:pointer;border:1px solid transparent}.chat-item:hover,.chat-item.active{background:#1a2920;border-color:#2c4937}.person{width:43px;height:43px;border-radius:15px;display:grid;place-items:center;font-weight:800;font-size:14px;flex-shrink:0;background:linear-gradient(145deg,#456b55,#263b2e);color:#e0f7e7}.person.p2{background:linear-gradient(145deg,#675d86,#38314d)}.person.p3{background:linear-gradient(145deg,#8a6c48,#51402d)}.person.p4{background:linear-gradient(145deg,#47717b,#29444a)}.chat-meta{min-width:0;flex:1}.chat-line{display:flex;justify-content:space-between;gap:8px}.chat-name{font-weight:700}.time{font-size:10px;color:#829389;white-space:nowrap}.preview{color:#93a49a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:4px}.unread{background:var(--green2);color:#072013;font-size:10px;font-weight:900;min-width:19px;height:19px;border-radius:20px;display:grid;place-items:center;margin-top:5px}
+.conversation{display:flex;flex-direction:column;min-width:0;position:relative;background:linear-gradient(160deg,#121b16,#0e1511)}.topbar{height:76px;display:flex;align-items:center;padding:0 24px;border-bottom:1px solid var(--line);gap:12px}.top-person{width:40px;height:40px;border-radius:14px;background:#304b38;display:grid;place-items:center;font-weight:800}.top-details{flex:1}.top-name{font-weight:800;font-size:15px}.online{font-size:11px;color:var(--green);margin-top:2px}.top-actions{display:flex;gap:8px}.top-actions button{border:1px solid var(--line);background:#17231b;border-radius:11px;width:37px;height:37px;color:#b7c8bd}
+.messages{flex:1;overflow:auto;padding:28px clamp(16px,5vw,70px);display:flex;flex-direction:column;gap:15px}.day{align-self:center;color:#8ea196;font-size:10px;background:#1b2921;border:1px solid var(--line);border-radius:20px;padding:6px 12px;margin-bottom:8px}.bubble-row{display:flex;flex-direction:column;max-width:min(78%,520px);gap:5px}.bubble-row.mine{align-self:flex-end;align-items:flex-end}.bubble-row.theirs{align-self:flex-start}.sender{font-size:10px;color:#93a79a;padding:0 5px}.bubble{padding:12px 15px;border-radius:5px 17px 17px 17px;background:#1b2b21;border:1px solid #2b4032;color:#e5efe8;box-shadow:0 5px 18px #0002;overflow-wrap:anywhere}.mine .bubble{background:linear-gradient(135deg,#286a45,#1c5838);border-color:#38875a;border-radius:17px 5px 17px 17px}.bubble-time{font-size:9px;color:#819389;padding:0 5px}.composer-wrap{padding:15px clamp(14px,4vw,48px) 20px;border-top:1px solid var(--line)}.composer{display:flex;align-items:center;gap:10px;border:1px solid #34483a;background:#111c15;border-radius:17px;padding:8px 9px 8px 14px}.composer input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--text);padding:9px 0}.send{width:39px;height:39px;border:0;border-radius:13px;background:var(--green);color:#092014;font-size:17px;font-weight:900}.hint{font-size:10px;color:#708176;padding:9px 4px 0}
+.inspector{padding:22px 17px;overflow:auto;background:#101813}.inspect-head{display:flex;align-items:center;justify-content:space-between;margin:8px 0 18px}.inspect-head h2{font-size:16px;margin:0}.live-pill{font-size:9px;color:var(--green);border:1px solid #28563a;background:#14291b;border-radius:20px;padding:5px 8px}.card{border:1px solid var(--line);background:#141f18;border-radius:15px;padding:14px;margin-bottom:12px}.card-title{font-size:11px;color:#aabbb0;font-weight:800;letter-spacing:.5px;margin-bottom:12px}.status-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:9px 0;font-size:11px;color:#b7c6bc}.status{display:flex;align-items:center;gap:6px;color:var(--green);font-size:10px}.dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px #70e0a0}.metric{display:flex;justify-content:space-between;color:#9bac9f;font-size:11px;margin:8px 0}.metric b{color:#e4eee7;font-weight:700}.endpoint{font:10px ui-monospace,monospace;color:#a7d7b7;background:#0b130e;border-radius:7px;padding:8px;overflow-wrap:anywhere}.feature{display:flex;justify-content:space-between;align-items:center;font-size:11px;margin:10px 0;color:#b8c7bd}.tag{font-size:9px;border-radius:5px;padding:3px 6px;background:#203d2a;color:var(--green)}.tag.planned{background:#302a1c;color:var(--gold)}.bottom-note{color:#718176;font-size:10px;line-height:1.6;margin:14px 3px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#e4f8ea;color:#0b2917;padding:10px 16px;border-radius:12px;font-weight:700;font-size:12px;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:5}.toast.show{opacity:1}
+.mobile-inspector{display:none}
+@media(max-width:1120px){.app{grid-template-columns:68px 290px minmax(300px,1fr)}.inspector{display:none}.mobile-inspector{display:inline-grid}}
+@media(max-width:720px){.app{height:100dvh;min-height:560px;grid-template-columns:58px minmax(0,1fr)}.rail{padding:14px 6px;gap:9px}.brand{width:38px;height:38px;margin-bottom:12px}.rail-btn{width:42px;height:42px}.chats{padding:18px 12px 10px}.chats-head h1{font-size:22px}.conversation{display:none}.app.chat-open .chats{display:none}.app.chat-open .conversation{display:flex;grid-column:2}.topbar{height:66px;padding:0 12px}.messages{padding:20px 12px}.bubble-row{max-width:88%}.composer-wrap{padding:12px}.back-btn{display:grid!important}.top-actions button:nth-child(1){display:none}}
+.back-btn{display:none}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+<aside class="rail">
+ <div class="brand">C</div>
+ <button class="rail-btn active" title="Chats" data-view="Chats">◫</button>
+ <button class="rail-btn" title="Contacts" data-view="Contacts">♙</button>
+ <button class="rail-btn" title="Calls" data-view="Calls">⌕</button>
+ <button class="rail-btn" title="Status" data-view="Status">◉</button>
+ <button class="rail-btn" title="Channels" data-view="Channels">▤</button>
+ <div class="rail-spacer"></div>
+ <button class="rail-btn" title="Developer inspector" id="inspectToggle">⌘</button>
+ <div class="avatar">S</div>
+</aside>
+<section class="chats">
+ <div class="eyebrow">Your conversations</div>
+ <div class="chats-head"><h1 id="listTitle">Messages</h1><button class="icon-btn" id="newChat" title="New chat">＋</button></div>
+ <label class="search">⌕ <input id="search" placeholder="Search conversations"></label>
+ <div class="section-label" id="listLabel">PINNED & RECENT</div>
+ <div class="chat-list" id="chatList">
+  <div class="chat-item active" data-id="general" data-name="Chat.com Team" data-initial="C"><div class="person">C</div><div class="chat-meta"><div class="chat-line"><span class="chat-name">Chat.com Team</span><span class="time">10:42</span></div><div class="preview">Welcome to your private workspace</div></div><span class="unread">2</span></div>
+  <div class="chat-item" data-id="maya" data-name="Maya Sharma" data-initial="M"><div class="person p2">M</div><div class="chat-meta"><div class="chat-line"><span class="chat-name">Maya Sharma</span><span class="time">09:18</span></div><div class="preview">That new interface looks great!</div></div></div>
+  <div class="chat-item" data-id="project" data-name="Project Studio" data-initial="P"><div class="person p3">P</div><div class="chat-meta"><div class="chat-line"><span class="chat-name">Project Studio</span><span class="time">Yesterday</span></div><div class="preview">You: Let's review the next build</div></div><span class="unread">4</span></div>
+  <div class="chat-item" data-id="arjun" data-name="Arjun Verma" data-initial="A"><div class="person p4">A</div><div class="chat-meta"><div class="chat-line"><span class="chat-name">Arjun Verma</span><span class="time">Mon</span></div><div class="preview">Voice notes are coming soon</div></div></div>
+ </div>
+ <div class="bottom-note">CHAT.COM PREVIEW · LOCAL DEVELOPMENT<br>Messages are stored by your local backend.</div>
+</section>
+<main class="conversation">
+ <header class="topbar">
+  <button class="icon-btn back-btn" id="back">‹</button>
+  <div class="top-person" id="activeInitial">C</div>
+  <div class="top-details"><div class="top-name" id="activeName">Chat.com Team</div><div class="online" id="activeStatus">● Local demo conversation</div></div>
+  <div class="top-actions"><button title="Voice call" data-coming="Voice calls">⌕</button><button title="Video call" data-coming="Video calls">▣</button><button title="Conversation details" id="detailsBtn">ⓘ</button><button class="mobile-inspector" title="Inspector" id="mobileInspect">⌘</button></div>
+ </header>
+ <section class="messages" id="messages"><div class="day">TODAY · LOCAL PREVIEW</div></section>
+ <footer class="composer-wrap">
+  <form class="composer" id="sendForm"><button type="button" class="icon-btn" data-coming="Attachments">＋</button><input id="messageInput" maxlength="4000" autocomplete="off" placeholder="Write a message…"><button class="send" type="submit">➤</button></form>
+  <div class="hint">Enter to send · This preview saves messages through the connected local API</div>
+ </footer>
+</main>
+<aside class="inspector" id="inspector">
+ <div class="eyebrow">Developer tools</div><div class="inspect-head"><h2>Live inspector</h2><span class="live-pill">● LOCAL</span></div>
+ <div class="card"><div class="card-title">BACKEND CONNECTION</div><div class="status-row"><span>API service</span><span class="status" id="apiStatus"><i class="dot"></i> Checking</span></div><div class="status-row"><span>Database</span><span class="status" id="dbStatus">Local SQLite</span></div><div class="metric"><span>API latency</span><b id="latency">—</b></div><div class="metric"><span>API version</span><b id="version">—</b></div></div>
+ <div class="card"><div class="card-title">ACTIVE ENDPOINTS</div><div class="endpoint">GET /health</div><div class="endpoint" style="margin-top:7px">GET /api/v1/system</div><div class="endpoint" style="margin-top:7px">GET /api/v1/messages</div><div class="endpoint" style="margin-top:7px">POST /api/v1/messages</div></div>
+ <div class="card"><div class="card-title">FEATURE STATUS</div><div id="featureList"><div class="feature"><span>Chat interface</span><span class="tag">READY</span></div><div class="feature"><span>Backend health</span><span class="tag">READY</span></div><div class="feature"><span>Local message storage</span><span class="tag">READY</span></div><div class="feature"><span>Phone OTP</span><span class="tag planned">PLANNED</span></div><div class="feature"><span>End-to-end encryption</span><span class="tag planned">PLANNED</span></div><div class="feature"><span>Voice / video calls</span><span class="tag planned">PLANNED</span></div></div></div>
+ <div class="card"><div class="card-title">CURRENT SESSION</div><div class="metric"><span>Conversation</span><b id="sessionConversation">general</b></div><div class="metric"><span>Messages loaded</span><b id="messageCount">0</b></div><div class="metric"><span>Environment</span><b>Development</b></div></div>
+ <div class="bottom-note">Inspector data comes from your running backend where available. Planned features are clearly labelled and are not represented as working.</div>
+</aside>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const API = "";
+const app=document.getElementById("app");
+const messagesEl=document.getElementById("messages");
+const toastEl=document.getElementById("toast");
+let activeId="general",activeName="Chat.com Team",messageCount=0;
+function toast(s){toastEl.textContent=s;toastEl.classList.add("show");setTimeout(()=>toastEl.classList.remove("show"),2200)}
+function safe(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function drawMessage(m){const mine=m.sender==="You";const row=document.createElement("div");row.className="bubble-row "+(mine?"mine":"theirs");row.innerHTML=(mine?"":'<div class="sender">'+safe(m.sender)+'</div>')+'<div class="bubble">'+safe(m.text)+'</div><div class="bubble-time">'+new Date(m.created_at).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</div>';messagesEl.appendChild(row)}
+async function loadMessages(){messagesEl.innerHTML='<div class="day">TODAY · LOCAL PREVIEW</div>';try{const r=await fetch(API+"/api/v1/messages?conversation_id="+encodeURIComponent(activeId));if(!r.ok)throw Error("API "+r.status);const data=await r.json();data.messages.forEach(drawMessage);messageCount=data.messages.length;document.getElementById("messageCount").textContent=messageCount;messagesEl.scrollTop=messagesEl.scrollHeight}catch(e){toast("Backend unavailable — start the local server");}}
+async function sendMessage(text){const r=await fetch(API+"/api/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({conversation_id:activeId,sender:"You",text})});if(!r.ok)throw Error("Could not save message");const data=await r.json();drawMessage(data);messageCount++;document.getElementById("messageCount").textContent=messageCount;messagesEl.scrollTop=messagesEl.scrollHeight;const item=document.querySelector('.chat-item[data-id="'+activeId+'"] .preview');if(item)item.textContent="You: "+text}
+document.getElementById("sendForm").addEventListener("submit",async e=>{e.preventDefault();const input=document.getElementById("messageInput");const value=input.value.trim();if(!value)return;input.value="";try{await sendMessage(value)}catch(err){toast(err.message);input.value=value}});
+function selectChat(item){document.querySelectorAll(".chat-item").forEach(x=>x.classList.remove("active"));item.classList.add("active");activeId=item.dataset.id;activeName=item.dataset.name;document.getElementById("activeName").textContent=activeName;document.getElementById("activeInitial").textContent=item.dataset.initial;document.getElementById("sessionConversation").textContent=activeId;app.classList.add("chat-open");loadMessages()}
+document.querySelectorAll(".chat-item").forEach(item=>item.addEventListener("click",()=>selectChat(item)));
+document.getElementById("back").addEventListener("click",()=>app.classList.remove("chat-open"));
+document.getElementById("search").addEventListener("input",e=>{const q=e.target.value.toLowerCase();document.querySelectorAll(".chat-item").forEach(i=>i.style.display=i.dataset.name.toLowerCase().includes(q)?"flex":"none")});
+document.querySelectorAll(".rail-btn[data-view]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".rail-btn[data-view]").forEach(x=>x.classList.remove("active"));b.classList.add("active");const v=b.dataset.view;if(v!=="Chats"){document.getElementById("listTitle").textContent=v;document.getElementById("listLabel").textContent="DEVELOPMENT PREVIEW";toast(v+" section is planned for a later approved upgrade")}else{document.getElementById("listTitle").textContent="Messages";document.getElementById("listLabel").textContent="PINNED & RECENT"}}));
+document.querySelectorAll("[data-coming]").forEach(b=>b.addEventListener("click",()=>toast(b.dataset.coming+" are not implemented yet")));
+document.getElementById("newChat").addEventListener("click",()=>toast("Contact discovery will be added in a later upgrade"));
+document.getElementById("detailsBtn").addEventListener("click",()=>toast("Conversation details are shown in the inspector"));
+function toggleInspector(){const el=document.getElementById("inspector");if(innerWidth<=1120){toast("Rotate to landscape or widen the browser to view the inspector")}else{el.style.display=el.style.display==="none"?"block":"none"}}
+document.getElementById("inspectToggle").addEventListener("click",toggleInspector);document.getElementById("mobileInspect").addEventListener("click",toggleInspector);
+async function checkBackend(){const started=performance.now();try{const [h,s]=await Promise.all([fetch(API+"/health"),fetch(API+"/api/v1/system")]);if(!h.ok||!s.ok)throw Error("API response error");const health=await h.json(),system=await s.json();document.getElementById("apiStatus").innerHTML='<i class="dot"></i> Connected';document.getElementById("version").textContent=system.version||"—";document.getElementById("latency").textContent=Math.round(performance.now()-started)+" ms";document.getElementById("dbStatus").textContent="SQLite · local";document.getElementById("activeStatus").textContent="● Backend connected · "+health.status;return true}catch(e){document.getElementById("apiStatus").textContent="Disconnected";document.getElementById("apiStatus").style.color="var(--red)";document.getElementById("activeStatus").textContent="● Backend offline";document.getElementById("activeStatus").style.color="var(--red)";return false}}
+loadMessages();checkBackend();setInterval(checkBackend,12000);
+</script>
+</body></html>
