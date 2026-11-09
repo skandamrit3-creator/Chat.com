@@ -1,0 +1,43 @@
+name: Flutter app checks
+
+on:
+  push:
+    branches:
+      - main
+      - review/**
+    paths:
+      - "app/**"
+      - ".github/workflows/flutter-ci.yml"
+  pull_request:
+    paths:
+      - "app/**"
+      - ".github/workflows/flutter-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  flutter:
+    name: Analyze and test Android client
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze Dart code
+        run: flutter analyze
+
+      - name: Run widget tests
+        run: flutter test
