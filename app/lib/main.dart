@@ -118,7 +118,7 @@ class ChatsPage extends StatelessWidget {
                   Text('Your conversations, together', style: TextStyle(fontSize: 12, color: _muted)),
                 ],
               )),
-              IconButton(tooltip: 'New message', onPressed: () => _showPreviewNotice(context, 'New message'), icon: const Icon(Icons.edit_square, color: _brand)),
+              IconButton(tooltip: 'New message', onPressed: () => _showPreviewNotice(context, 'New message'), icon: const Icon(Icons.edit_outlined, color: _brand)),
             ]),
             const SizedBox(height: 25),
             const Text('Messages', style: TextStyle(fontSize: 29, fontWeight: FontWeight.w800)),
