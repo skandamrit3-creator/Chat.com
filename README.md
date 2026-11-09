@@ -16,8 +16,9 @@ The complete product map, screen behavior, visual direction, security rules, rep
 
 ## Current implementation
 
-- Flutter / Dart Android client starter.
-- FastAPI backend with root, health, and system information endpoints.
+- Local Chrome development frontend in the root `index.html` (HTML, CSS, and JavaScript).
+- FastAPI backend serving the frontend and providing health, system, and SQLite-backed local preview messaging APIs.
+- Flutter / Dart Android client starter retained for a later app-packaging stage.
 - Development configuration and backend tests.
 - GitHub Actions workflow for backend checks.
 
@@ -56,6 +57,20 @@ Run tests from the backend directory:
 ```bash
 pytest
 ```
+
+### Chrome development preview
+
+Run the backend from the `backend` directory. On your Android phone, open the project folder in Acode, open its terminal, and run:
+
+```bash
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8060
+```
+
+Then open Chrome on the same phone and visit `http://127.0.0.1:8060`. The frontend and API use the same local server. The developer inspector shows backend health, API latency, active endpoints, and which features are implemented versus planned. You can also open the interactive API reference at `http://127.0.0.1:8060/docs`.
+
+The preview stores demo messages in a local SQLite database under `backend/data/`. This is development-only storage, not a production messaging database. Port `8060` is used to avoid colliding with the `8059` port used by the separate COSMIC project.
 
 ### Android app
 
