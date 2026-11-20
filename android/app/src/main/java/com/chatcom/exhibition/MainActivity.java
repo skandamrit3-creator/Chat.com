@@ -24,7 +24,7 @@ public class MainActivity extends Activity {
                 Intent i=p.createIntent(); try{startActivityForResult(i,FILE_CHOOSER);}catch(Exception e){uploadCallback=null;Toast.makeText(MainActivity.this,"Unable to open gallery",Toast.LENGTH_SHORT).show();return false;} return true;
             }
         });
-        web.loadUrl("https://chat-com-2fv2.onrender.com/");
+        web.loadUrl("https://chat-com-username-messaging.onrender.com/");
     }
     @Override protected void onActivityResult(int req,int res,Intent data){super.onActivityResult(req,res,data);if(req==FILE_CHOOSER&&uploadCallback!=null){Uri u=(res==RESULT_OK&&data!=null)?data.getData():null;uploadCallback.onReceiveValue(u==null?null:new Uri[]{u});uploadCallback=null;}}
     @Override public void onBackPressed(){if(web!=null&&web.canGoBack())web.goBack();else super.onBackPressed();}
