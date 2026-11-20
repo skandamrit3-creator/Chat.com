@@ -22,7 +22,7 @@
 <button id="authSubmit" class="primary wide" type="submit">Sign in</button><div id="authError" class="auth-error" role="status"></div>
 </form>
 <button id="authSwitch" class="switch" type="button">New to Chat.com? Create an account</button>
-<p class="muted" style="font-size:11px;margin:14px 0 0">Private one-to-one messaging. Images up to 5 MB.</p>
+<p class="muted" style="font-size:11px;margin:14px 0 0">Private one-to-one messaging. Images up to 5 MB and videos up to 20 MB.</p>
 </main></div>
 <div id="appView" class="app hidden">
 <aside class="sidebar"><div class="side-head">
@@ -31,7 +31,7 @@
 <div class="section-label">Your conversations</div></div><div id="conversationList" class="conversation-list"></div></aside>
 <main class="chat-panel"><header class="chat-top"><button id="backBtn" class="mobile-back" type="button" aria-label="Back to conversations">‹</button><div id="chatAvatar" class="avatar">C</div><div><div id="chatTitle" class="chat-title">Your messages</div><div id="chatSubtitle" class="chat-sub">Private conversations</div></div></header>
 <div id="messageSpace" class="chat-space"><div class="welcome"><div class="welcome-symbol">✉</div><h2>Your conversations, in one place</h2><p>Search for a username to start a private text conversation.</p></div></div>
-<form id="composer" class="composer"><label style="display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;cursor:pointer;color:var(--accent)" title="Send image">＋<input id="imageInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden></label><input id="messageInput" class="message-input" type="text" maxlength="4000" placeholder="Write a message…" autocomplete="off" disabled><button id="sendBtn" class="send" type="submit" disabled aria-label="Send message">➤</button></form>
+<form id="composer" class="composer"><label style="display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;cursor:pointer;color:var(--accent)" title="Send image or video">＋<input id="imageInput" type="file" accept="image/*,video/mp4,video/webm,video/quicktime" hidden></label><input id="messageInput" class="message-input" type="text" maxlength="4000" placeholder="Write a message…" autocomplete="off" disabled><button id="sendBtn" class="send" type="submit" disabled aria-label="Send message">➤</button></form>
 </main></div><div id="toast" class="toast hidden" role="status"></div>
 <script>
 (function(){
@@ -123,7 +123,7 @@ $("composer").addEventListener("submit",async event=>{
  catch(error){showToast(error.message);}finally{$("sendBtn").disabled=false;$("messageInput").focus();}
 });
 
-$("imageInput").addEventListener("change",async()=>{const file=$("imageInput").files[0];$("imageInput").value="";if(!file||!activeUsername)return;if(file.size>5*1024*1024){showToast("Image must be 5 MB or smaller.");return;}if(!["image/jpeg","image/png","image/gif","image/webp"].includes(file.type)){showToast("Choose a JPEG, PNG, GIF, or WebP image.");return;}const fd=new FormData();fd.append("image",file);try{const response=await fetch("/api/messages/image?recipient="+encodeURIComponent(activeUsername),{method:"POST",credentials:"same-origin",body:fd});let result={};try{result=await response.json();}catch(_){}if(!response.ok)throw new Error(result.detail||"Image upload failed.");await loadMessages(false);await refreshConversations();showToast("Image sent.");}catch(error){showToast(error.message);}});
+$("imageInput").addEventListener("change",async()=>{const file=$("imageInput").files[0];$("imageInput").value="";if(!file||!activeUsername)return;const isImage=file.type.startsWith("image/"),isVideo=file.type.startsWith("video/");if(!["image/jpeg","image/png","image/gif","image/webp"].includes(file.type)&&!["video/mp4","video/webm","video/quicktime"].includes(file.type)){showToast("Choose JPEG, PNG, GIF, WebP, MP4, WebM, or MOV.");return;}const limit=isImage?5*1024*1024:20*1024*1024;if(file.size>limit){showToast((isImage?"Image":"Video")+(isImage?" must be 5":" must be 20")+" MB or smaller.");return;}const fd=new FormData();fd.append("image",file);try{showToast("Uploading media…");const response=await fetch("/api/messages/media?recipient="+encodeURIComponent(activeUsername),{method:"POST",credentials:"same-origin",body:fd});let result={};try{result=await response.json();}catch(_){}if(!response.ok)throw new Error(result.detail||"Media upload failed.");await loadMessages(false);await refreshConversations();showToast("Media sent.");}catch(error){showToast(error.message);}});
 $("logoutBtn").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"});}catch(_){}me=null;showAuth();$("authPassword").value="";showToast("Signed out");});
 $("backBtn").addEventListener("click",()=>{$("appView").classList.remove("chat-open");});
 async function boot(){try{const result=await api("/api/me");me=result.user;await enterApp();}catch(_){showAuth();}}
