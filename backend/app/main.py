@@ -1,4 +1,4 @@
-import sqlite3, hashlib, secrets, re, os
+import sqlite3, hashlib, secrets, re, os, base64
 from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Header, Depends
