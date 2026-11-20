@@ -22,7 +22,7 @@
 <button id="authSubmit" class="primary wide" type="submit">Sign in</button><div id="authError" class="auth-error" role="status"></div>
 </form>
 <button id="authSwitch" class="switch" type="button">New to Chat.com? Create an account</button>
-<p class="muted" style="font-size:11px;margin:14px 0 0">Private one-to-one text messaging. No photos, calls, groups, or feeds.</p>
+<p class="muted" style="font-size:11px;margin:14px 0 0">Private one-to-one messaging. Images up to 5 MB.</p>
 </main></div>
 <div id="appView" class="app hidden">
 <aside class="sidebar"><div class="side-head">
@@ -31,7 +31,7 @@
 <div class="section-label">Your conversations</div></div><div id="conversationList" class="conversation-list"></div></aside>
 <main class="chat-panel"><header class="chat-top"><button id="backBtn" class="mobile-back" type="button" aria-label="Back to conversations">‹</button><div id="chatAvatar" class="avatar">C</div><div><div id="chatTitle" class="chat-title">Your messages</div><div id="chatSubtitle" class="chat-sub">Private conversations</div></div></header>
 <div id="messageSpace" class="chat-space"><div class="welcome"><div class="welcome-symbol">✉</div><h2>Your conversations, in one place</h2><p>Search for a username to start a private text conversation.</p></div></div>
-<form id="composer" class="composer"><input id="messageInput" class="message-input" type="text" maxlength="4000" placeholder="Write a message…" autocomplete="off" disabled><button id="sendBtn" class="send" type="submit" disabled aria-label="Send message">➤</button></form>
+<form id="composer" class="composer"><label style="display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;cursor:pointer;color:var(--accent)" title="Send image">＋<input id="imageInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp" hidden></label><input id="messageInput" class="message-input" type="text" maxlength="4000" placeholder="Write a message…" autocomplete="off" disabled><button id="sendBtn" class="send" type="submit" disabled aria-label="Send message">➤</button></form>
 </main></div><div id="toast" class="toast hidden" role="status"></div>
 <script>
 (function(){
@@ -80,7 +80,7 @@ function renderConversations(items){
   const content=document.createElement("div");content.className="conv-text";const top=document.createElement("div");top.className="conv-top";
   const name=document.createElement("span");name.className="conv-name";name.textContent=item.username;
   const time=document.createElement("span");time.className="conv-time";time.textContent=shortTime(item.last_message_at);
-  const preview=document.createElement("div");preview.className="conv-last";preview.textContent=item.last_message;
+  const preview=document.createElement("div");preview.className="conv-last";preview.textContent=item.last_message||"📷 Image";
   top.append(name,time);content.append(top,preview);button.append(avatar,content);
   if(item.unread){const badge=document.createElement("span");badge.className="unread";badge.textContent=item.unread;button.appendChild(badge);}
   button.addEventListener("click",()=>openConversation(item.username));list.appendChild(button);
@@ -106,7 +106,7 @@ async function openConversation(username){
 }
 function renderMessage(item){
  const row=document.createElement("div");row.className="bubble-row"+(item.sender===me.username?" mine":"");
- const bubble=document.createElement("div");bubble.className="bubble";const body=document.createElement("div");body.textContent=String(item.body||"");
+ const bubble=document.createElement("div");bubble.className="bubble";const body=document.createElement("div");body.textContent=String(item.body||"");if(item.image){const img=document.createElement("img");img.src=item.image.url;img.alt=item.image.filename;img.style.cssText="display:block;max-width:min(260px,70vw);max-height:340px;border-radius:12px;margin:2px 0 8px";img.loading="lazy";body.appendChild(img);}
  const time=document.createElement("div");time.className="bubble-time";time.textContent=shortTime(item.created_at);bubble.append(body,time);row.appendChild(bubble);return row;
 }
 async function loadMessages(appendOnly){
@@ -122,6 +122,8 @@ $("composer").addEventListener("submit",async event=>{
  try{await api("/api/messages",{method:"POST",body:JSON.stringify({recipient:activeUsername,body})});$("messageInput").value="";await loadMessages(true);await refreshConversations();}
  catch(error){showToast(error.message);}finally{$("sendBtn").disabled=false;$("messageInput").focus();}
 });
+
+$("imageInput").addEventListener("change",async()=>{const file=$("imageInput").files[0];$("imageInput").value="";if(!file||!activeUsername)return;if(file.size>5*1024*1024){showToast("Image must be 5 MB or smaller.");return;}if(!["image/jpeg","image/png","image/gif","image/webp"].includes(file.type)){showToast("Choose a JPEG, PNG, GIF, or WebP image.");return;}const fd=new FormData();fd.append("image",file);try{const response=await fetch("/api/messages/image?recipient="+encodeURIComponent(activeUsername),{method:"POST",credentials:"same-origin",body:fd});let result={};try{result=await response.json();}catch(_){}if(!response.ok)throw new Error(result.detail||"Image upload failed.");await loadMessages(false);await refreshConversations();showToast("Image sent.");}catch(error){showToast(error.message);}});
 $("logoutBtn").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"});}catch(_){}me=null;showAuth();$("authPassword").value="";showToast("Signed out");});
 $("backBtn").addEventListener("click",()=>{$("appView").classList.remove("chat-open");});
 async function boot(){try{const result=await api("/api/me");me=result.user;await enterApp();}catch(_){showAuth();}}
