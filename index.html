@@ -106,7 +106,7 @@ async function openConversation(username){
 }
 function renderMessage(item){
  const row=document.createElement("div");row.className="bubble-row"+(item.sender===me.username?" mine":"");
- const bubble=document.createElement("div");bubble.className="bubble";const body=document.createElement("div");body.textContent=String(item.body||"");if(item.image){const img=document.createElement("img");img.src=item.image.url;img.alt=item.image.filename;img.style.cssText="display:block;max-width:min(260px,70vw);max-height:340px;border-radius:12px;margin:2px 0 8px";img.loading="lazy";body.appendChild(img);}
+ const bubble=document.createElement("div");bubble.className="bubble";const body=document.createElement("div");body.textContent=String(item.body||"");if(item.image){if(item.image.content_type.startsWith("video/")){const video=document.createElement("video");video.src=item.image.url;video.controls=true;video.playsInline=true;video.style.cssText="display:block;max-width:min(300px,75vw);max-height:380px;border-radius:12px;margin:2px 0 8px";body.appendChild(video);}else{const img=document.createElement("img");img.src=item.image.url;img.alt=item.image.filename;img.style.cssText="display:block;max-width:min(260px,70vw);max-height:340px;border-radius:12px;margin:2px 0 8px";img.loading="lazy";body.appendChild(img);}}
  const time=document.createElement("div");time.className="bubble-time";time.textContent=shortTime(item.created_at);bubble.append(body,time);row.appendChild(bubble);return row;
 }
 async function loadMessages(appendOnly){
