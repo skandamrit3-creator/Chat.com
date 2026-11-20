@@ -8,10 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, UploadFile, File
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, create_engine, desc, event, or_, text, update
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, LargeBinary, create_engine, desc, event, or_, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -33,6 +33,8 @@ PBKDF2_ROUNDS = 310_000
 USERNAME_RE = re.compile(r"^[a-z0-9_]{3,24}$")
 PASSWORD_MIN = 10
 MESSAGE_MAX = 4000
+IMAGE_MAX_BYTES = 5 * 1024 * 1024
+IMAGE_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/gif": b"GIF8", "image/webp": b"RIFF"}
 
 
 def build_engine(url: str):
@@ -82,6 +84,15 @@ class Message(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
     read_at = Column(DateTime(timezone=True), nullable=True)
 
+class Attachment(Base):
+    __tablename__ = "attachments"
+    id = Column(Integer, primary_key=True)
+    message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    filename = Column(String(255), nullable=False)
+    content_type = Column(String(32), nullable=False)
+    size = Column(Integer, nullable=False)
+    data = Column(LargeBinary, nullable=False)
+
 
 class Credentials(BaseModel):
     username: str = Field(min_length=3, max_length=24, pattern=r"^[A-Za-z0-9_]+$")
@@ -90,7 +101,7 @@ class Credentials(BaseModel):
 
 class NewMessage(BaseModel):
     recipient: str = Field(min_length=3, max_length=24, pattern=r"^[A-Za-z0-9_]+$")
-    body: str = Field(min_length=1, max_length=MESSAGE_MAX)
+    body: str = Field(default="", max_length=MESSAGE_MAX)
 
 
 app = FastAPI(title="Chat.com", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
@@ -184,12 +195,14 @@ def iso_time(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def message_json(message: Message, current: User, peer: User):
+def message_json(message: Message, current: User, peer: User, db=None):
     sender = current.username if message.sender_id == current.id else peer.username
     recipient = peer.username if message.recipient_id == peer.id else current.username
+    attachment = db.query(Attachment).filter(Attachment.message_id == message.id).first() if db else None
     return {
         "id": message.id, "sender": sender, "recipient": recipient, "body": message.body,
         "created_at": iso_time(message.created_at), "read": message.read_at is not None,
+        "image": ({"id": attachment.id, "filename": attachment.filename, "content_type": attachment.content_type, "size": attachment.size, "url": f"/api/attachments/{attachment.id}"} if attachment else None),
     }
 
 
@@ -297,7 +310,7 @@ def get_messages(
         rows = query.filter(Message.id > after_id).order_by(Message.id.asc()).limit(100).all()
     else:
         rows = list(reversed(query.order_by(desc(Message.id)).limit(100).all()))
-    return {"messages": [message_json(item, user, peer) for item in rows]}
+    return {"messages": [message_json(item, user, peer, db) for item in rows]}
 
 
 @app.post("/api/messages", status_code=201)
@@ -317,4 +330,28 @@ def send_message(data: NewMessage, user: User = Depends(get_current_user), db: S
     db.add(message)
     db.commit()
     db.refresh(message)
-    return {"message": message_json(message, user, recipient)}
+    return {"message": message_json(message, user, recipient, db)}
+
+@app.post("/api/messages/image", status_code=201)
+def send_image(recipient: str = Query(min_length=3, max_length=24), image: UploadFile = File(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    recipient_name = normalize_username(recipient)
+    if recipient_name == user.username: raise HTTPException(status_code=422, detail="You cannot message your own account.")
+    peer = db.query(User).filter(User.username == recipient_name).first()
+    if not peer: raise HTTPException(status_code=404, detail="User not found.")
+    if image.content_type not in IMAGE_TYPES: raise HTTPException(status_code=415, detail="Only JPEG, PNG, GIF, and WebP images are allowed.")
+    data = image.file.read(IMAGE_MAX_BYTES + 1)
+    if not data or len(data) > IMAGE_MAX_BYTES: raise HTTPException(status_code=413, detail="Image must be 5 MB or smaller.")
+    if not data.startswith(IMAGE_TYPES[image.content_type]) or (image.content_type == "image/webp" and data[8:12] != b"WEBP"):
+        raise HTTPException(status_code=415, detail="File content does not match the image type.")
+    msg = Message(sender_id=user.id, recipient_id=peer.id, body="")
+    db.add(msg); db.flush()
+    name = re.sub(r"[^A-Za-z0-9._-]", "_", (image.filename or "image")[:255]) or "image"
+    db.add(Attachment(message_id=msg.id, filename=name, content_type=image.content_type, size=len(data), data=data))
+    db.commit(); db.refresh(msg)
+    return {"message": message_json(msg, user, peer, db)}
+
+@app.get("/api/attachments/{attachment_id}")
+def get_attachment(attachment_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    attachment = db.query(Attachment).join(Message, Attachment.message_id == Message.id).filter(Attachment.id == attachment_id, or_(Message.sender_id == user.id, Message.recipient_id == user.id)).first()
+    if not attachment: raise HTTPException(status_code=404, detail="Image not found.")
+    return Response(content=attachment.data, media_type=attachment.content_type, headers={"Content-Disposition": "inline; filename=\"image\"", "Cache-Control": "private, no-store"})
