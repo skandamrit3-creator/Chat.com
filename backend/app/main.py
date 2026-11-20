@@ -34,7 +34,9 @@ USERNAME_RE = re.compile(r"^[a-z0-9_]{3,24}$")
 PASSWORD_MIN = 10
 MESSAGE_MAX = 4000
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
-IMAGE_TYPES = {"image/jpeg": b"\xff\xd8\xff", "image/png": b"\x89PNG\r\n\x1a\n", "image/gif": b"GIF8", "image/webp": b"RIFF"}
+VIDEO_MAX_BYTES = 20 * 1024 * 1024
+MEDIA_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm", "video/quicktime"}
+MEDIA_LIMITS = {"image/jpeg": IMAGE_MAX_BYTES, "image/png": IMAGE_MAX_BYTES, "image/gif": IMAGE_MAX_BYTES, "image/webp": IMAGE_MAX_BYTES, "video/mp4": VIDEO_MAX_BYTES, "video/webm": VIDEO_MAX_BYTES, "video/quicktime": VIDEO_MAX_BYTES}
 
 
 def build_engine(url: str):
@@ -89,7 +91,7 @@ class Attachment(Base):
     id = Column(Integer, primary_key=True)
     message_id = Column(Integer, ForeignKey("messages.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
     filename = Column(String(255), nullable=False)
-    content_type = Column(String(32), nullable=False)
+    content_type = Column(String(64), nullable=False)
     size = Column(Integer, nullable=False)
     data = Column(LargeBinary, nullable=False)
 
@@ -278,7 +280,7 @@ def conversations(user: User = Depends(get_current_user), db: Session = Depends(
             peer = db.get(User, peer_id)
             if peer:
                 peers[peer_id] = {
-                    "username": peer.username, "last_message": item.body or ("📷 Image" if db.query(Attachment).filter(Attachment.message_id == item.id).first() else ""),
+                    "username": peer.username, "last_message": item.body or ("📎 Media" if db.query(Attachment).filter(Attachment.message_id == item.id).first() else ""),
                     "last_message_at": iso_time(item.created_at), "last_message_id": item.id, "unread": 0,
                 }
         if item.recipient_id == user.id and item.read_at is None and peer_id in peers:
@@ -333,20 +335,34 @@ def send_message(data: NewMessage, user: User = Depends(get_current_user), db: S
     return {"message": message_json(message, user, recipient, db)}
 
 @app.post("/api/messages/image", status_code=201)
-def send_image(recipient: str = Query(min_length=3, max_length=24), image: UploadFile = File(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+@app.post("/api/messages/media", status_code=201)
+def send_media(recipient: str = Query(min_length=3, max_length=24), image: UploadFile = File(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     recipient_name = normalize_username(recipient)
-    if recipient_name == user.username: raise HTTPException(status_code=422, detail="You cannot message your own account.")
+    if recipient_name == user.username:
+        raise HTTPException(status_code=422, detail="You cannot message your own account.")
     peer = db.query(User).filter(User.username == recipient_name).first()
-    if not peer: raise HTTPException(status_code=404, detail="User not found.")
-    if image.content_type not in IMAGE_TYPES: raise HTTPException(status_code=415, detail="Only JPEG, PNG, GIF, and WebP images are allowed.")
-    data = image.file.read(IMAGE_MAX_BYTES + 1)
-    if not data or len(data) > IMAGE_MAX_BYTES: raise HTTPException(status_code=413, detail="Image must be 5 MB or smaller.")
-    if not data.startswith(IMAGE_TYPES[image.content_type]) or (image.content_type == "image/webp" and data[8:12] != b"WEBP"):
-        raise HTTPException(status_code=415, detail="File content does not match the image type.")
+    if not peer:
+        raise HTTPException(status_code=404, detail="User not found.")
+    media_type = image.content_type or ""
+    if media_type not in MEDIA_TYPES:
+        raise HTTPException(status_code=415, detail="Supported media: JPEG, PNG, GIF, WebP, MP4, WebM, or MOV.")
+    data = image.file.read(MEDIA_LIMITS[media_type] + 1)
+    if not data or len(data) > MEDIA_LIMITS[media_type]:
+        limit_mb = 5 if media_type.startswith("image/") else 20
+        raise HTTPException(status_code=413, detail=f"File must be {limit_mb} MB or smaller.")
+    valid = False
+    if media_type == "image/jpeg": valid = data.startswith(b"\\xff\\xd8\\xff")
+    elif media_type == "image/png": valid = data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    elif media_type == "image/gif": valid = data.startswith(b"GIF8")
+    elif media_type == "image/webp": valid = data.startswith(b"RIFF") and data[8:12] == b"WEBP"
+    elif media_type in ("video/mp4", "video/quicktime"): valid = len(data) >= 12 and data[4:8] == b"ftyp"
+    elif media_type == "video/webm": valid = data.startswith(b"\\x1a\\x45\\xdf\\xa3")
+    if not valid:
+        raise HTTPException(status_code=415, detail="File content does not match the selected media type.")
     msg = Message(sender_id=user.id, recipient_id=peer.id, body="")
     db.add(msg); db.flush()
-    name = re.sub(r"[^A-Za-z0-9._-]", "_", (image.filename or "image")[:255]) or "image"
-    db.add(Attachment(message_id=msg.id, filename=name, content_type=image.content_type, size=len(data), data=data))
+    name = re.sub(r"[^A-Za-z0-9._-]", "_", (image.filename or "media")[:255]) or "media"
+    db.add(Attachment(message_id=msg.id, filename=name, content_type=media_type, size=len(data), data=data))
     db.commit(); db.refresh(msg)
     return {"message": message_json(msg, user, peer, db)}
 
