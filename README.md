@@ -1,98 +1,51 @@
 # Chat.com
 
-**Chat.com** is an Android-first, privacy-focused messaging app built for fast, dependable communication. It is a separate product from COSMIC AI, with an optional secure integration path in the future.
+Chat.com is a deliberately small private messaging application with exactly two product capabilities:
 
-## Product plan
+1. Backend and accounts: registration, sign-in, session management, username search, and persistent message storage.
+2. Private text chat: one-to-one text conversations between registered users.
 
-The complete product map, screen behavior, visual direction, security rules, repository structure, and review agreement are documented here:
+There are no photos, attachments, voice/video calls, groups, channels, stories, feeds, bots, or AI features in this rebuild.
 
-- [Product mind map](docs/MIND_MAP.md)
-- [Product specification](docs/PRODUCT_SPEC.md)
-- [UI guidelines](docs/UI_GUIDELINES.md)
-- [Repository file plan](docs/FILE_STRUCTURE.md)
-- [Security baseline](docs/SECURITY_BASELINE.md)
-- [Architecture decisions](docs/ARCHITECTURE.md)
-- [User review process](docs/REVIEW_PROCESS.md)
+## Run locally
 
-## Current implementation
+Requires Python 3.11 or newer.
 
-- Local Chrome development frontend in the root `index.html` (HTML, CSS, and JavaScript).
-- FastAPI backend serving the frontend and providing health, system, and SQLite-backed local preview messaging APIs.
-- Flutter / Dart Android client starter retained for a later app-packaging stage.
-- Development configuration and backend tests.
-- GitHub Actions workflow for backend checks.
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8060
 
-This is an early foundation. Real phone OTP, user accounts, persisted messaging, end-to-end encryption, calls, media transfer, and production deployment are not yet implemented. A configured CI workflow is not proof of a passing run; check the Actions tab for actual results.
+Open http://127.0.0.1:8060. The local development database is SQLite at chatcom-dev.db.
 
-## Architecture
+Create two accounts in separate browser profiles (or one normal and one private window) to test messages between users.
 
-| Layer | Technology | Responsibility |
-|---|---|---|
-| Android client | Flutter / Dart | UI, navigation, local state, secure device storage |
-| API | FastAPI / Python | Identity, profiles, conversations, authorization |
-| Realtime | WebSockets | Live events and message delivery |
-| Database | PostgreSQL | Users, devices, conversations, messages |
-| Cache / jobs | Redis | Presence, rate limits, background tasks |
-| Media | Private object storage | Photos, videos, documents, voice notes |
-| Push | Firebase Cloud Messaging | Offline notifications |
+## Production database and deployment
 
-## Local development
+Production mode intentionally refuses to start without DATABASE_URL. Do not deploy with SQLite on an ephemeral application filesystem: it can lose user accounts and messages when the service is replaced.
 
-### Backend
+For Render:
+1. Create a managed PostgreSQL database.
+2. Create a Python web service from this repository/branch.
+3. Set ENVIRONMENT=production.
+4. Set DATABASE_URL to the PostgreSQL internal connection string from that database.
+5. Build command: pip install -r requirements.txt
+6. Start command: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+7. Health check path: /health
 
-Python 3.11+:
+The database is not provisioned automatically by this repository, so no paid database is created without your approval.
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8059
-```
+## Included behavior
 
-Health check: `http://127.0.0.1:8059/health`
+- Usernames are unique and case-insensitive; 3–24 letters, numbers, or underscores.
+- Passwords are stored as salted PBKDF2-HMAC-SHA256 hashes, never plaintext.
+- Login sessions are random, stored as SHA-256 token hashes, and delivered in HttpOnly cookies.
+- Messages are stored in PostgreSQL in production and SQLite during local development.
+- A user can only retrieve messages exchanged between their own account and the selected recipient.
+- Text messages are limited to 4,000 characters.
+- The browser refreshes conversations and the active chat automatically.
+- The frontend is served by the same FastAPI service as the API, avoiding separate frontend/API origin configuration.
 
-Run tests from the backend directory:
+## Tests
 
-```bash
-pytest
-```
-
-### Chrome development preview
-
-Run the backend from the `backend` directory. On your Android phone, open the project folder in Acode, open its terminal, and run:
-
-```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8060
-```
-
-Then open Chrome on the same phone and visit `http://127.0.0.1:8060`. The frontend and API use the same local server. The developer inspector shows backend health, API latency, active endpoints, and which features are implemented versus planned. You can also open the interactive API reference at `http://127.0.0.1:8060/docs`.
-
-The preview stores demo messages in a local SQLite database under `backend/data/`. This is development-only storage, not a production messaging database. Port `8060` is used to avoid colliding with the `8059` port used by the separate COSMIC project.
-
-### Android app
-
-Install Flutter and the Android SDK:
-
-```bash
-cd app
-flutter pub get
-flutter run
-```
-
-## Development agreement
-
-We will make one small, coherent upgrade at a time. After each upgrade, the owner reviews the actual result. Work pauses until explicit approval is given for the next change. Each review report must identify changed files, actual test results, known limitations, and the relevant commit.
-
-## Security
-
-- Never commit API keys, OTP credentials, signing keys, database passwords, or private encryption keys.
-- Production OTP must use a real configured provider; development test codes are not production authentication.
-- Use reviewed cryptographic protocols and maintained libraries. Do not invent cryptography or claim E2EE before it is implemented and verified.
-- Keep user media private and access-controlled. Personal Google Drive storage is not the app's shared backend.
-
-## License
-
-All rights reserved unless a license is added by the project owner.
+    pytest -q

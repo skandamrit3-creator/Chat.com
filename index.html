@@ -1,24 +1,131 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#101b2b"><title>Chat.com</title>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111827">
+<title>Chat.com — Private text messaging</title>
 <style>
-:root{--ink:#172235;--muted:#7e8a9b;--accent:#5b71f2;--line:#e8edf4;--bg:#f4f6fb;--white:#fff}*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,Arial;color:var(--ink)}button,input{font:inherit}button{cursor:pointer}#app{height:100dvh;max-width:1200px;margin:auto;display:flex;background:#fff;overflow:hidden;box-shadow:0 20px 70px #1b28401a}.side{width:350px;flex-shrink:0;border-right:1px solid var(--line);display:flex;flex-direction:column;background:white}.brand{padding:25px 23px 20px;display:flex;align-items:center;gap:12px}.logo{height:42px;width:42px;border-radius:14px;background:linear-gradient(135deg,#657bff,#8b57d8);display:grid;place-items:center;color:white;font-weight:900;font-size:22px;box-shadow:0 8px 18px #657bff40}.brand h1{font-size:20px;margin:0;letter-spacing:-.5px}.brand small{display:block;color:var(--muted);font-size:12px;margin-top:2px}.search{padding:0 18px 17px}.search input{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:14px;outline:none;background:#f7f8fc}.search input:focus,.gate input:focus,.composer input:focus{border-color:#a8b5ff;box-shadow:0 0 0 3px #667bff15}.search .btn{width:100%;margin-top:10px}.list{overflow:auto;flex:1;padding:4px 10px}.listlabel{font-size:11px;font-weight:800;letter-spacing:1px;color:#9aa4b2;padding:13px 12px 8px;text-transform:uppercase}.item{display:flex;align-items:center;gap:12px;padding:13px 12px;border-radius:14px;cursor:pointer;margin-bottom:3px}.item.active,.item:hover{background:#f2f4ff}.avatar{width:43px;height:43px;border-radius:15px;background:linear-gradient(135deg,#e6eaff,#d7defe);display:grid;place-items:center;color:#4d61d8;font-weight:800;flex-shrink:0}.itemtext{min-width:0;flex:1}.itemtext b{display:block;font-size:14px}.itemtext small{display:block;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.main{flex:1;display:flex;flex-direction:column;min-width:0;background:#f8f9fd}.welcome{margin:auto;text-align:center;padding:35px;color:#758195}.welcome .biglogo{height:84px;width:84px;border-radius:28px;background:linear-gradient(135deg,#657bff,#8b57d8);color:white;display:grid;place-items:center;font-size:35px;font-weight:900;margin:0 auto 20px;box-shadow:0 14px 30px #657bff30}.welcome h2{color:var(--ink);margin:0 0 8px}.head{height:76px;background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;display:flex;gap:12px;align-items:center}.head b{flex:1}.head small{display:block;color:var(--muted);font-weight:400;margin-top:3px}.head button{border:1px solid var(--line);background:#fff;color:var(--ink);padding:9px 12px;border-radius:12px}.msgs{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:13px;background:radial-gradient(circle at 15% 10%,#eef1ff 0,transparent 30%),#f8f9fd}.bubble{max-width:min(78%,460px);padding:12px 14px;border-radius:18px;background:#fff;overflow-wrap:anywhere;box-shadow:0 3px 12px #17223508;line-height:1.45}.mine{align-self:flex-end;background:#657bff;color:white;border-bottom-right-radius:5px}.theirs{align-self:flex-start;border-bottom-left-radius:5px}.bubble img{display:block;max-width:min(100%,280px);max-height:340px;border-radius:12px;margin-bottom:4px}.stamp{display:block;text-align:right;opacity:.65;font-size:10px;margin-top:5px}.composer{padding:14px 18px;display:flex;gap:10px;background:white;border-top:1px solid var(--line);align-items:center}.composer input{flex:1;min-width:0;padding:13px 15px;border:1px solid var(--line);background:#f7f8fc;border-radius:25px;outline:none}.btn{background:var(--accent);color:white;border:0;border-radius:13px;padding:12px 16px;font-weight:750;box-shadow:0 5px 13px #657bff30}.btn:hover{filter:brightness(.97)}.photo{background:#f1f3ff;color:#5367e7;border:0;border-radius:13px;padding:12px;font-size:18px}.gate{margin:auto;width:min(430px,92%);padding:30px;background:white;border-radius:24px;box-shadow:0 20px 60px #202e4b15}.gate h1{margin:0;color:var(--ink);font-size:28px}.gate p{color:var(--muted)}.gate input{width:100%;padding:14px;margin:8px 0;border:1px solid var(--line);border-radius:13px;outline:none}.gate button{width:100%;margin-top:12px}.switch{text-align:center;color:var(--accent);padding:15px;cursor:pointer;font-weight:650}.hint{font-size:12px;color:#9aa4b2}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#172235;color:white;padding:13px 18px;border-radius:13px;display:none;z-index:5;box-shadow:0 10px 30px #0002}.toast.show{display:block}#gate{position:fixed;inset:0;background:#f4f6fb;display:none;z-index:4;padding:15px}.side.hide{display:none}.main.open{display:flex}@media(max-width:700px){#app{height:100dvh}.side{width:100%;border:0}.main{display:none}.main.open{display:flex;position:fixed;inset:0;z-index:2}.side.hide{display:none}.head{height:68px;padding:10px 14px}.msgs{padding:15px}.composer{padding:10px}.gate{padding:24px}.bubble{max-width:88%}}
-</style></head><body><div id="app"><aside class="side" id="side"><div class="brand"><div class="logo">C</div><div><h1>Chat.com</h1><small>Simple. Personal. Connected.</small></div></div><div class="search"><input id="find" placeholder="Find someone by username…" onkeydown="if(event.key==='Enter')findUser()"><button class="btn" onclick="findUser()">＋ Start a conversation</button></div><div class="list" id="contacts"><div class="listlabel">Conversations</div></div></aside><main class="main" id="main"><div class="welcome"><div class="biglogo">C</div><h2>Your messages, together.</h2><p>Find someone by username and send a message or photo.</p></div></main></div>
-<div id="gate"><section class="gate"><div class="logo">C</div><h1>Welcome to Chat.com</h1><p>Use your account to chat from any device.</p><input id="username" autocomplete="username" placeholder="Username (3–24 characters)"><input id="password" autocomplete="current-password" type="password" placeholder="Password (8+ characters)"><button class="btn" id="authBtn" onclick="authenticate()">Create account</button><div class="switch" id="switch" onclick="switchMode()">Already registered? Sign in</div><p class="hint">Use a unique password. Messages are not end-to-end encrypted.</p></section></div><div class="toast" id="toast"></div><input id="image" type="file" accept="image/*" hidden onchange="uploadImage(this)">
+:root{color-scheme:dark;--bg:#0b1020;--panel:#111a2d;--line:#26344d;--muted:#91a0b8;--text:#eff4ff;--accent:#66e0c2;--blue:#56a5ff;--danger:#ff8f9a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 650px at 8% -10%,#1c3152 0%,transparent 58%),var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}button,input{font:inherit}button{cursor:pointer}.hidden{display:none!important}
+.auth-wrap{min-height:100vh;display:grid;place-items:center;padding:24px}.auth-card{width:min(440px,100%);padding:34px;background:rgba(17,26,45,.94);border:1px solid var(--line);border-radius:26px;box-shadow:0 28px 80px #0008}.brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:23px;letter-spacing:-.7px}.brand-mark{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,var(--accent),var(--blue));display:grid;place-items:center;color:#071521;font-size:22px}.muted{color:var(--muted)}.auth-card h1{font-size:25px;margin:28px 0 7px;letter-spacing:-.7px}.auth-card p{margin:0 0 23px}.field{display:grid;gap:7px;margin:15px 0}.field label{font-size:13px;color:#b9c7da}.field input,.search-input,.message-input{width:100%;padding:13px 14px;border:1px solid #33435f;border-radius:12px;background:#0d1628;color:var(--text);outline:none}.field input:focus,.search-input:focus,.message-input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #56a5ff22}.primary{border:0;border-radius:12px;background:linear-gradient(110deg,var(--accent),#81d7ed);color:#071521;font-weight:800;padding:13px 18px}.wide{width:100%;margin-top:9px}.switch{border:0;background:none;color:var(--accent);padding:12px 4px}.auth-error{color:var(--danger);min-height:21px;font-size:13px;margin-top:10px}
+.app{height:100dvh;max-width:1500px;margin:auto;padding:18px;display:grid;grid-template-columns:350px minmax(0,1fr);gap:16px}.sidebar,.chat-panel{background:rgba(17,26,45,.95);border:1px solid var(--line);border-radius:22px;min-height:0;overflow:hidden}.sidebar{display:flex;flex-direction:column}.side-head{padding:21px 20px 16px;border-bottom:1px solid var(--line)}.side-brand{display:flex;justify-content:space-between;align-items:center}.side-brand .brand{font-size:19px}.logout{color:#b6c4d9;background:transparent;border:1px solid var(--line);border-radius:10px;padding:7px 10px;font-size:12px}.section-label{font-size:11px;letter-spacing:1.3px;text-transform:uppercase;color:#8193ad;margin:20px 0 9px}.search-wrap{position:relative}.search-input{padding:12px 13px}.search-results{position:absolute;z-index:5;top:48px;left:0;right:0;background:#17243a;border:1px solid #354766;border-radius:13px;box-shadow:0 15px 40px #0008;overflow:hidden}.result{width:100%;border:0;background:none;color:var(--text);padding:12px 14px;text-align:left;display:flex;justify-content:space-between}.result:hover,.conversation:hover{background:#1c2c45}.conversation-list{overflow:auto;padding:8px}.conversation{display:flex;align-items:center;gap:12px;width:100%;border:0;background:transparent;border-radius:14px;padding:12px;color:var(--text);text-align:left}.conversation.active{background:#20324d}.avatar{width:42px;height:42px;flex:0 0 42px;border-radius:15px;background:linear-gradient(145deg,#285a70,#344b80);display:grid;place-items:center;font-weight:800;color:#d9fff5}.conv-text{min-width:0;flex:1}.conv-top{display:flex;justify-content:space-between;gap:8px}.conv-name{font-weight:700}.conv-time,.conv-last{font-size:12px;color:var(--muted)}.conv-last{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}.unread{font-size:11px;color:#061722;background:var(--accent);border-radius:20px;padding:2px 7px;font-weight:800}
+.chat-panel{display:flex;flex-direction:column;position:relative}.chat-top{height:76px;border-bottom:1px solid var(--line);padding:0 24px;display:flex;align-items:center;gap:12px}.chat-top .avatar{width:40px;height:40px}.chat-title{font-weight:750}.chat-sub{font-size:12px;color:var(--muted)}.chat-space{flex:1;overflow:auto;padding:26px clamp(16px,5vw,70px);display:flex;flex-direction:column;gap:12px}.welcome{margin:auto;text-align:center;max-width:380px}.welcome-symbol{width:74px;height:74px;margin:0 auto 18px;border-radius:25px;background:linear-gradient(145deg,#193b54,#263a67);display:grid;place-items:center;font-size:34px;color:var(--accent)}.welcome h2{font-size:22px;margin:0 0 8px}.welcome p{color:var(--muted);margin:0}.bubble-row{display:flex}.bubble-row.mine{justify-content:flex-end}.bubble{max-width:min(72%,560px);padding:11px 14px;border-radius:16px;background:#1c2a42;border:1px solid #2d3c56;overflow-wrap:anywhere;white-space:pre-wrap}.mine .bubble{background:linear-gradient(130deg,#185c60,#225a80);border-color:#367b85}.bubble-time{font-size:10px;color:#aab8ca;text-align:right;margin-top:5px}.composer{padding:15px 20px 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:10px}.message-input{resize:none;min-height:48px;max-height:120px;flex:1}.send{width:48px;height:48px;border:0;border-radius:14px;background:var(--accent);color:#08202a;font-size:21px;font-weight:900}.send:disabled,.message-input:disabled{opacity:.4;cursor:not-allowed}.mobile-back{display:none;border:0;color:var(--text);background:transparent;font-size:23px}.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);padding:11px 16px;border-radius:12px;background:#253750;border:1px solid #48607b;color:white;box-shadow:0 8px 30px #0008;z-index:20}
+@media(max-width:760px){.app{padding:0;display:block;height:100dvh}.sidebar,.chat-panel{border:0;border-radius:0;height:100dvh}.chat-panel{display:none}.app.chat-open .sidebar{display:none}.app.chat-open .chat-panel{display:flex}.side-head{padding-top:calc(16px + env(safe-area-inset-top))}.chat-top{height:70px;padding:0 14px;padding-top:env(safe-area-inset-top)}.mobile-back{display:block}.chat-space{padding:18px 14px}.bubble{max-width:84%}.composer{padding:12px 12px calc(12px + env(safe-area-inset-bottom))}.auth-card{padding:27px 23px}.auth-wrap{padding:16px}}
+</style>
+</head>
+<body>
+<div id="authView" class="auth-wrap"><main class="auth-card">
+<div class="brand"><div class="brand-mark">C</div><span>Chat.com</span></div>
+<h1 id="authHeading">Welcome back</h1><p id="authIntro" class="muted">Sign in to continue your private conversations.</p>
+<form id="authForm">
+<div class="field"><label for="authUsername">Username</label><input id="authUsername" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]+" placeholder="your_username" required></div>
+<div class="field"><label for="authPassword">Password</label><input id="authPassword" name="password" type="password" autocomplete="current-password" minlength="10" maxlength="128" placeholder="At least 10 characters" required></div>
+<button id="authSubmit" class="primary wide" type="submit">Sign in</button><div id="authError" class="auth-error" role="status"></div>
+</form>
+<button id="authSwitch" class="switch" type="button">New to Chat.com? Create an account</button>
+<p class="muted" style="font-size:11px;margin:14px 0 0">Private one-to-one text messaging. No photos, calls, groups, or feeds.</p>
+</main></div>
+<div id="appView" class="app hidden">
+<aside class="sidebar"><div class="side-head">
+<div class="side-brand"><div class="brand"><div class="brand-mark">C</div><span>Chat.com</span></div><button id="logoutBtn" class="logout" type="button">Sign out</button></div>
+<div class="section-label">Find people</div><div class="search-wrap"><input id="userSearch" class="search-input" type="search" placeholder="Search username…" autocomplete="off" maxlength="24"><div id="searchResults" class="search-results hidden"></div></div>
+<div class="section-label">Your conversations</div></div><div id="conversationList" class="conversation-list"></div></aside>
+<main class="chat-panel"><header class="chat-top"><button id="backBtn" class="mobile-back" type="button" aria-label="Back to conversations">‹</button><div id="chatAvatar" class="avatar">C</div><div><div id="chatTitle" class="chat-title">Your messages</div><div id="chatSubtitle" class="chat-sub">Private conversations</div></div></header>
+<div id="messageSpace" class="chat-space"><div class="welcome"><div class="welcome-symbol">✉</div><h2>Your conversations, in one place</h2><p>Search for a username to start a private text conversation.</p></div></div>
+<form id="composer" class="composer"><input id="messageInput" class="message-input" type="text" maxlength="4000" placeholder="Write a message…" autocomplete="off" disabled><button id="sendBtn" class="send" type="submit" disabled aria-label="Send message">➤</button></form>
+</main></div><div id="toast" class="toast hidden" role="status"></div>
 <script>
-let token=localStorage.getItem('chat_token')||'',me='',current='',mode='register',pollTimer=null;
-async function api(path,opt={}){opt.headers={...(opt.headers||{}),...(token?{Authorization:'Bearer '+token}:{})};let r=await fetch(path,opt),d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.detail||'Request failed');return d}
-function toast(s){let e=document.getElementById('toast');e.textContent=s;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2400)}
-function switchMode(){mode=mode==='register'?'login':'register';document.getElementById('authBtn').textContent=mode==='register'?'Create account':'Sign in';document.getElementById('switch').textContent=mode==='register'?'Already registered? Sign in':'New here? Create account'}
-async function authenticate(){let username=document.getElementById('username').value.trim(),password=document.getElementById('password').value;if(!username||!password)return toast('Enter both fields');try{let d=await api('/api/v1/auth/'+mode,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});token=d.token;localStorage.setItem('chat_token',token);start()}catch(e){toast(e.message)}}
-async function start(){try{let d=await api('/api/v1/me');me=d.username;document.getElementById('gate').style.display='none';document.getElementById('side').style.display='flex';loadContacts()}catch(e){token='';localStorage.removeItem('chat_token');document.getElementById('gate').style.display='flex';document.getElementById('side').style.display='none'}}
-async function loadContacts(){try{let d=await api('/api/v1/contacts');let ns=d.users;if(current&&!ns.includes(current))ns.unshift(current);let e=document.getElementById('contacts');e.innerHTML='<div class="listlabel">Conversations</div>'+ns.map(n=>'<div class="item '+(current===n?'active':'')+'" onclick="openChat(\''+n+'\')"><div class="avatar">'+esc(n.slice(0,1).toUpperCase())+'</div><div class="itemtext"><b>@'+esc(n)+'</b><small>Tap to open conversation</small></div></div>').join('')+(ns.length?'':'<div style="padding:12px;color:#98a1b1;font-size:13px">No conversations yet. Find someone above.</div>')}catch(e){}}
-async function findUser(){let n=document.getElementById('find').value.trim().replace(/^@/,'').toLowerCase();if(!n)return toast('Type a username');try{let d=await api('/api/v1/users/'+encodeURIComponent(n));openChat(d.username)}catch(e){toast(e.message)}}
-function openChat(n){current=n;document.getElementById('side').classList.add('hide');let m=document.getElementById('main');m.classList.add('open');m.innerHTML='<div class="head"><button onclick="back()">←</button><div class="avatar">'+esc(n.slice(0,1).toUpperCase())+'</div><div style="flex:1"><b>@'+esc(n)+'</b><small>Chat conversation</small></div><button onclick="logout()">Sign out</button></div><div class="msgs" id="msgs"></div><div class="composer"><button class="photo" title="Send photo" onclick="document.getElementById(\'image\').click()">＋</button><input id="txt" placeholder="Write a message…" onkeydown="if(event.key===\'Enter\')send()"><button class="btn" onclick="send()">Send</button></div>';loadContacts();refresh();clearInterval(pollTimer);pollTimer=setInterval(refresh,1800)}
-function back(){current='';document.getElementById('side').classList.remove('hide');document.getElementById('main').classList.remove('open');clearInterval(pollTimer)}
-function esc(s){return String(s).replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
-async function refresh(){if(!current)return;try{let d=await api('/api/v1/messages/'+encodeURIComponent(current));let e=document.getElementById('msgs');if(!e)return;let h=d.messages.map(m=>'<div class="bubble '+(m.sender===me?'mine':'theirs')+'">'+(m.media_data?'<img src="'+m.media_data+'" alt="Shared photo">':'')+(m.text?'<div>'+esc(m.text)+'</div>':'')+'<span class="stamp">'+esc(m.sender)+' · '+new Date(m.created_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span></div>').join('');if(e.dataset.html!==h){let bottom=e.scrollTop+e.clientHeight>=e.scrollHeight-60;e.innerHTML=h;e.dataset.html=h;if(bottom||!e.dataset.init)e.scrollTop=e.scrollHeight;e.dataset.init='1'}}catch(e){}}
-async function send(){let input=document.getElementById('txt'),v=input.value.trim();if(!v)return;try{await api('/api/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:current,text:v})});input.value='';refresh();loadContacts()}catch(e){toast(e.message)}}
-async function uploadImage(input){let f=input.files[0];if(!f)return;if(!f.type.startsWith('image/')){toast('Choose an image file');input.value='';return}if(f.size>5*1024*1024){toast('Maximum image size is 5 MB');input.value='';return}let r=new FileReader();r.onload=async()=>{try{await api('/api/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:current,text:'',media_data:r.result,media_type:f.type})});refresh()}catch(e){toast(e.message)}input.value=''};r.readAsDataURL(f)}
-async function logout(){try{await api('/api/v1/auth/logout',{method:'POST'})}catch(e){}token='';localStorage.removeItem('chat_token');current='';clearInterval(pollTimer);start()}
-document.getElementById('side').style.display='none';start();
-</script></body></html>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+let registering=false,me=null,activeUsername=null,lastMessageId=0,pollTimer=null,searchTimer=null,toastTimer=null;
+async function api(path,options){
+ const config=options||{};config.credentials="same-origin";config.headers=Object.assign({"Content-Type":"application/json"},config.headers||{});
+ const response=await fetch(path,config);let payload={};try{payload=await response.json();}catch(_){}
+ if(!response.ok)throw new Error(payload.detail||"Request failed. Please try again.");return payload;
+}
+function showToast(message){$("toast").textContent=message;$("toast").classList.remove("hidden");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.add("hidden"),2600);}
+function showAuth(){$("appView").classList.add("hidden");$("authView").classList.remove("hidden");clearInterval(pollTimer);}
+function showApp(){$("authView").classList.add("hidden");$("appView").classList.remove("hidden");}
+function authMode(){
+ $("authHeading").textContent=registering?"Create your account":"Welcome back";
+ $("authIntro").textContent=registering?"Choose a username and password to get started.":"Sign in to continue your private conversations.";
+ $("authSubmit").textContent=registering?"Create account":"Sign in";
+ $("authSwitch").textContent=registering?"Already registered? Sign in":"New to Chat.com? Create an account";
+ $("authPassword").setAttribute("autocomplete",registering?"new-password":"current-password");$("authError").textContent="";
+}
+$("authSwitch").addEventListener("click",()=>{registering=!registering;authMode();});
+$("authForm").addEventListener("submit",async event=>{
+ event.preventDefault();$("authSubmit").disabled=true;$("authError").textContent="";
+ const data={username:$("authUsername").value.trim(),password:$("authPassword").value};
+ try{const result=await api(registering?"/api/auth/register":"/api/auth/login",{method:"POST",body:JSON.stringify(data)});me=result.user;await enterApp();}
+ catch(error){$("authError").textContent=error.message;}finally{$("authSubmit").disabled=false;}
+});
+async function enterApp(){
+ showApp();$("userSearch").value="";$("searchResults").classList.add("hidden");activeUsername=null;$("appView").classList.remove("chat-open");renderWelcome();
+ await refreshConversations();clearInterval(pollTimer);pollTimer=setInterval(async()=>{await refreshConversations();if(activeUsername)await loadMessages(true);},2500);
+}
+function renderWelcome(){
+ $("chatTitle").textContent="Your messages";$("chatSubtitle").textContent="Private conversations";$("chatAvatar").textContent="C";
+ $("messageInput").disabled=true;$("sendBtn").disabled=true;
+ $("messageSpace").innerHTML='<div class="welcome"><div class="welcome-symbol">✉</div><h2>Your conversations, in one place</h2><p>Search for a username to start a private text conversation.</p></div>';
+}
+function initials(username){return String(username||"C").slice(0,1).toUpperCase();}
+function shortTime(value){try{return new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit"}).format(new Date(value));}catch(_){return "";}}
+function renderConversations(items){
+ const list=$("conversationList");list.replaceChildren();
+ if(!items.length){const note=document.createElement("div");note.className="muted";note.style.cssText="padding:18px 12px;font-size:13px";note.textContent="No conversations yet. Search for a username above.";list.appendChild(note);return;}
+ items.forEach(item=>{
+  const button=document.createElement("button");button.type="button";button.className="conversation"+(activeUsername===item.username?" active":"");
+  const avatar=document.createElement("div");avatar.className="avatar";avatar.textContent=initials(item.username);
+  const content=document.createElement("div");content.className="conv-text";const top=document.createElement("div");top.className="conv-top";
+  const name=document.createElement("span");name.className="conv-name";name.textContent=item.username;
+  const time=document.createElement("span");time.className="conv-time";time.textContent=shortTime(item.last_message_at);
+  const preview=document.createElement("div");preview.className="conv-last";preview.textContent=item.last_message;
+  top.append(name,time);content.append(top,preview);button.append(avatar,content);
+  if(item.unread){const badge=document.createElement("span");badge.className="unread";badge.textContent=item.unread;button.appendChild(badge);}
+  button.addEventListener("click",()=>openConversation(item.username));list.appendChild(button);
+ });
+}
+async function refreshConversations(){try{const data=await api("/api/conversations");renderConversations(data.conversations||[]);}catch(error){if(error.message.toLowerCase().includes("sign in"))showAuth();}}
+async function searchUsers(){
+ const term=$("userSearch").value.trim(),box=$("searchResults");if(!term){box.classList.add("hidden");box.replaceChildren();return;}
+ try{const data=await api("/api/users/search?q="+encodeURIComponent(term));box.replaceChildren();
+  if(!data.users.length){const empty=document.createElement("div");empty.className="result muted";empty.textContent="No users found";box.appendChild(empty);}
+  else data.users.forEach(item=>{const button=document.createElement("button");button.type="button";button.className="result";const label=document.createElement("strong");label.textContent=item.username;const hint=document.createElement("span");hint.className="muted";hint.textContent="Open chat";button.append(label,hint);button.addEventListener("click",()=>{box.classList.add("hidden");$("userSearch").value="";openConversation(item.username);});box.appendChild(button);});
+  box.classList.remove("hidden");
+ }catch(error){showToast(error.message);}
+}
+$("userSearch").addEventListener("input",()=>{clearTimeout(searchTimer);searchTimer=setTimeout(searchUsers,220);});
+$("userSearch").addEventListener("keydown",event=>{if(event.key==="Escape")$("searchResults").classList.add("hidden");});
+document.addEventListener("click",event=>{if(!event.target.closest(".search-wrap"))$("searchResults").classList.add("hidden");});
+async function openConversation(username){
+ activeUsername=username;lastMessageId=0;$("chatTitle").textContent=username;$("chatSubtitle").textContent="Private text conversation";$("chatAvatar").textContent=initials(username);
+ $("messageInput").disabled=false;$("sendBtn").disabled=false;$("messageSpace").replaceChildren();
+ $("messageSpace").innerHTML='<div class="chat-empty">Loading conversation…</div>';$("appView").classList.add("chat-open");
+ await loadMessages(false);await refreshConversations();$("messageInput").focus();
+}
+function renderMessage(item){
+ const row=document.createElement("div");row.className="bubble-row"+(item.sender===me.username?" mine":"");
+ const bubble=document.createElement("div");bubble.className="bubble";const body=document.createElement("div");body.textContent=String(item.body||"");
+ const time=document.createElement("div");time.className="bubble-time";time.textContent=shortTime(item.created_at);bubble.append(body,time);row.appendChild(bubble);return row;
+}
+async function loadMessages(appendOnly){
+ if(!activeUsername)return;const target=activeUsername;
+ try{const data=await api("/api/messages/"+encodeURIComponent(target)+"?after_id="+(appendOnly?lastMessageId:0));if(target!==activeUsername)return;
+  const items=data.messages||[],space=$("messageSpace");if(!appendOnly)space.replaceChildren();
+  if(!appendOnly&&!items.length){const empty=document.createElement("div");empty.className="welcome";const symbol=document.createElement("div");symbol.className="welcome-symbol";symbol.textContent="✉";const title=document.createElement("h2");title.textContent="Say hello to "+target;const detail=document.createElement("p");detail.textContent="This is the start of your private conversation.";empty.append(symbol,title,detail);space.appendChild(empty);}
+  else{items.forEach(item=>{space.appendChild(renderMessage(item));lastMessageId=Math.max(lastMessageId,item.id);});if(items.length)space.scrollTop=space.scrollHeight;}
+ }catch(error){showToast(error.message);}
+}
+$("composer").addEventListener("submit",async event=>{
+ event.preventDefault();const body=$("messageInput").value.trim();if(!activeUsername||!body)return;$("sendBtn").disabled=true;
+ try{await api("/api/messages",{method:"POST",body:JSON.stringify({recipient:activeUsername,body})});$("messageInput").value="";await loadMessages(true);await refreshConversations();}
+ catch(error){showToast(error.message);}finally{$("sendBtn").disabled=false;$("messageInput").focus();}
+});
+$("logoutBtn").addEventListener("click",async()=>{try{await api("/api/auth/logout",{method:"POST"});}catch(_){}me=null;showAuth();$("authPassword").value="";showToast("Signed out");});
+$("backBtn").addEventListener("click",()=>{$("appView").classList.remove("chat-open");});
+async function boot(){try{const result=await api("/api/me");me=result.user;await enterApp();}catch(_){showAuth();}}
+boot();
+})();
+</script>
+</body></html>

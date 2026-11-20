@@ -1,92 +1,320 @@
-import sqlite3, hashlib, secrets, re, os, base64
+import hashlib
+import hmac
+import os
+import re
+import secrets
+import time
 from datetime import datetime, timezone
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Header, Depends
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel, Field
-from app.settings import settings
+from urllib.parse import urlsplit
 
-app=FastAPI(title="Chat.com",version="0.3.0")
-app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_credentials=True,allow_methods=["*"],allow_headers=["*"])
-ROOT=Path(__file__).resolve().parents[2]; FRONT=ROOT/"index.html"
-DB=Path(os.environ.get("CHAT_DATABASE_PATH",str(Path(__file__).resolve().parents[1]/"data"/"chat_com_preview.db")))
-def db():
- DB.parent.mkdir(parents=True,exist_ok=True); c=sqlite3.connect(DB);c.row_factory=sqlite3.Row;return c
-def now():return datetime.now(timezone.utc).isoformat()
-def init():
- with db() as c:c.executescript("""CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,username TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,created_at TEXT NOT NULL);CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY,user_id INTEGER NOT NULL,created_at TEXT NOT NULL);CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY,sender_id INTEGER NOT NULL,receiver_id INTEGER NOT NULL,text TEXT NOT NULL,media_data TEXT,media_type TEXT,created_at TEXT NOT NULL);""")
-@app.on_event("startup")
-def startup():init()
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, create_engine, desc, event, or_, text, update
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+ROOT = Path(__file__).resolve().parents[2]
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development").lower()
+DATABASE_URL = os.getenv("DATABASE_URL")
+if ENVIRONMENT == "production" and not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL must point to persistent PostgreSQL in production.")
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite:///" + str(ROOT / "chatcom-dev.db")
+elif DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
+COOKIE_NAME = "chatcom_session"
+SESSION_SECONDS = 60 * 60 * 24 * 30
+PBKDF2_ROUNDS = 310_000
+USERNAME_RE = re.compile(r"^[a-z0-9_]{3,24}$")
+PASSWORD_MIN = 10
+MESSAGE_MAX = 4000
+
+
+def build_engine(url: str):
+    options = {"pool_pre_ping": True}
+    if url.startswith("sqlite"):
+        options["connect_args"] = {"check_same_thread": False}
+    created = create_engine(url, **options)
+    if url.startswith("sqlite"):
+        @event.listens_for(created, "connect")
+        def enable_foreign_keys(connection, _record):
+            cursor = connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+    return created
+
+
+engine = build_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True)
+    username = Column(String(24), unique=True, nullable=False, index=True)
+    password_hash = Column(String(256), nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class LoginSession(Base):
+    __tablename__ = "login_sessions"
+    id = Column(Integer, primary_key=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    expires_at = Column(Integer, nullable=False)
+
+
+class Message(Base):
+    __tablename__ = "messages"
+    id = Column(Integer, primary_key=True)
+    sender_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    read_at = Column(DateTime(timezone=True), nullable=True)
+
+
 class Credentials(BaseModel):
- username:str=Field(min_length=3,max_length=24)
- password:str=Field(min_length=8,max_length=128)
-class Message(BaseModel):
- to:str=Field(min_length=1,max_length=24)
- text:str=Field(default="",max_length=4000)
- media_data:str|None=None
- media_type:str|None=None
-def pw(p,s):return hashlib.pbkdf2_hmac("sha256",p.encode(),s.encode(),180000).hex()
-def auth(authorization:str|None=Header(default=None)):
- if not authorization or not authorization.startswith("Bearer "):raise HTTPException(401,"Please sign in")
- with db() as c:r=c.execute("SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=?",(authorization[7:],)).fetchone()
- if not r:raise HTTPException(401,"Session invalid")
- return r
-@app.get("/",include_in_schema=False)
+    username: str = Field(min_length=3, max_length=24, pattern=r"^[A-Za-z0-9_]+$")
+    password: str = Field(min_length=PASSWORD_MIN, max_length=128)
+
+
+class NewMessage(BaseModel):
+    recipient: str = Field(min_length=3, max_length=24, pattern=r"^[A-Za-z0-9_]+$")
+    body: str = Field(min_length=1, max_length=MESSAGE_MAX)
+
+
+app = FastAPI(title="Chat.com", version="1.0.0", docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.on_event("startup")
+def create_tables():
+    Base.metadata.create_all(bind=engine)
+
+
+@app.middleware("http")
+async def security_headers_and_origin(request: Request, call_next):
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/api/"):
+        origin = request.headers.get("origin")
+        host = request.headers.get("host", "").lower()
+        if origin and urlsplit(origin).netloc.lower() != host:
+            return JSONResponse({"detail": "Cross-origin request blocked."}, status_code=403)
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "same-origin"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def normalize_username(value: str) -> str:
+    username = value.strip().lower()
+    if not USERNAME_RE.fullmatch(username):
+        raise HTTPException(status_code=422, detail="Username must be 3–24 characters using letters, numbers, or underscores.")
+    return username
+
+
+def hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, PBKDF2_ROUNDS)
+    return "pbkdf2_sha256$" + str(PBKDF2_ROUNDS) + "$" + salt.hex() + "$" + digest.hex()
+
+
+def verify_password(password: str, encoded: str) -> bool:
+    try:
+        algorithm, rounds, salt_hex, digest_hex = encoded.split("$")
+        if algorithm != "pbkdf2_sha256":
+            return False
+        candidate = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), bytes.fromhex(salt_hex), int(rounds))
+        return hmac.compare_digest(candidate.hex(), digest_hex)
+    except (ValueError, TypeError):
+        return False
+
+
+def token_digest(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def issue_session(user: User, response: Response, db: Session):
+    token = secrets.token_urlsafe(32)
+    db.add(LoginSession(token_hash=token_digest(token), user_id=user.id, expires_at=int(time.time()) + SESSION_SECONDS))
+    db.commit()
+    response.set_cookie(
+        key=COOKIE_NAME, value=token, max_age=SESSION_SECONDS, httponly=True,
+        secure=(ENVIRONMENT == "production"), samesite="lax", path="/",
+    )
+
+
+def get_current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        raise HTTPException(status_code=401, detail="Please sign in.")
+    login = db.query(LoginSession).filter(
+        LoginSession.token_hash == token_digest(token),
+        LoginSession.expires_at > int(time.time()),
+    ).first()
+    if not login:
+        raise HTTPException(status_code=401, detail="Your session has expired. Please sign in again.")
+    user = db.get(User, login.user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="Account not found.")
+    return user
+
+
+def iso_time(value: datetime) -> str:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def message_json(message: Message, current: User, peer: User):
+    sender = current.username if message.sender_id == current.id else peer.username
+    recipient = peer.username if message.recipient_id == peer.id else current.username
+    return {
+        "id": message.id, "sender": sender, "recipient": recipient, "body": message.body,
+        "created_at": iso_time(message.created_at), "read": message.read_at is not None,
+    }
+
+
+@app.get("/", include_in_schema=False)
 def home():
- if not FRONT.exists():raise HTTPException(404,"index.html missing")
- return FileResponse(FRONT)
+    return FileResponse(ROOT / "index.html")
+
+
 @app.get("/health")
-def health():return {"status":"healthy","service":"chat-com","version":"0.3.0"}
-@app.post("/api/v1/auth/register")
-def register(a:Credentials):
- u=a.username.lower()
- if not re.fullmatch(r"[a-z0-9_.]{3,24}",u):raise HTTPException(400,"Username must be 3–24 letters, digits, . or _")
- salt=secrets.token_hex(16); token=secrets.token_urlsafe(32)
- with db() as c:
-  try:uid=c.execute("INSERT INTO users(username,password_hash,created_at) VALUES(?,?,?)",(u,salt+":"+pw(a.password,salt),now())).lastrowid
-  except sqlite3.IntegrityError:raise HTTPException(409,"Username already taken")
-  c.execute("INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)",(token,uid,now()))
- return {"token":token,"username":u}
-@app.post("/api/v1/auth/login")
-def login(a:Credentials):
- with db() as c:r=c.execute("SELECT * FROM users WHERE username=?",(a.username.lower(),)).fetchone()
- if not r:raise HTTPException(401,"Incorrect username or password")
- salt,stored=r["password_hash"].split(":",1)
- if not secrets.compare_digest(pw(a.password,salt),stored):raise HTTPException(401,"Incorrect username or password")
- token=secrets.token_urlsafe(32)
- with db() as c:c.execute("INSERT INTO sessions(token,user_id,created_at) VALUES(?,?,?)",(token,r["id"],now()))
- return {"token":token,"username":r["username"]}
-@app.post("/api/v1/auth/logout")
-def logout(u=Depends(auth),authorization:str|None=Header(default=None)):
- with db() as c:c.execute("DELETE FROM sessions WHERE token=?",(authorization[7:],))
- return {"ok":True}
-@app.get("/api/v1/me")
-def me(u=Depends(auth)):return {"username":u["username"]}
-@app.get("/api/v1/users/{username}")
-def lookup(username:str,u=Depends(auth)):
- with db() as c:r=c.execute("SELECT username FROM users WHERE username=?",(username.lower(),)).fetchone()
- if not r or r["username"]==u["username"]:raise HTTPException(404,"User not found")
- return dict(r)
-@app.get("/api/v1/contacts")
-def contacts(u=Depends(auth)):
- with db() as c:r=c.execute("SELECT DISTINCT p.username FROM messages m JOIN users p ON p.id=CASE WHEN m.sender_id=? THEN m.receiver_id ELSE m.sender_id END WHERE m.sender_id=? OR m.receiver_id=? ORDER BY p.username",(u["id"],u["id"],u["id"])).fetchall()
- return {"users":[x["username"] for x in r]}
-@app.get("/api/v1/messages/{username}")
-def get_messages(username:str,u=Depends(auth)):
- with db() as c:
-  t=c.execute("SELECT id FROM users WHERE username=?",(username.lower(),)).fetchone()
-  if not t:raise HTTPException(404,"User not found")
-  r=c.execute("SELECT m.id,m.text,m.media_data,m.media_type,m.created_at,s.username sender,r.username receiver FROM messages m JOIN users s ON s.id=m.sender_id JOIN users r ON r.id=m.receiver_id WHERE (m.sender_id=? AND m.receiver_id=?) OR (m.sender_id=? AND m.receiver_id=?) ORDER BY m.id LIMIT 300",(u["id"],t["id"],t["id"],u["id"])).fetchall()
- return {"messages":[dict(x) for x in r]}
-@app.post("/api/v1/messages",status_code=201)
-def send(m:Message,u=Depends(auth)):
- if not m.text.strip() and not m.media_data:raise HTTPException(400,"Empty message")
- if m.media_data and len(m.media_data)>7000000:raise HTTPException(413,"Image too large (max ~5 MB)")
- if m.media_data and m.media_type not in ("image/jpeg","image/png","image/webp","image/gif"):raise HTTPException(400,"Unsupported image type")
- with db() as c:
-  t=c.execute("SELECT id FROM users WHERE username=?",(m.to.lower(),)).fetchone()
-  if not t:raise HTTPException(404,"User not found")
-  mid=c.execute("INSERT INTO messages(sender_id,receiver_id,text,media_data,media_type,created_at) VALUES(?,?,?,?,?,?)",(u["id"],t["id"],m.text.strip(),m.media_data,m.media_type,now())).lastrowid
-  r=c.execute("SELECT m.id,m.text,m.media_data,m.media_type,m.created_at,s.username sender,r.username receiver FROM messages m JOIN users s ON s.id=m.sender_id JOIN users r ON r.id=m.receiver_id WHERE m.id=?",(mid,)).fetchone()
- return dict(r)
+def health(db: Session = Depends(get_db)):
+    db.execute(text("SELECT 1"))
+    return {"service": "Chat.com", "status": "healthy"}
+
+
+@app.post("/api/auth/register", status_code=201)
+def register(data: Credentials, response: Response, db: Session = Depends(get_db)):
+    username = normalize_username(data.username)
+    user = User(username=username, password_hash=hash_password(data.password))
+    db.add(user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="That username is already registered.")
+    db.refresh(user)
+    issue_session(user, response, db)
+    return {"user": {"id": user.id, "username": user.username}}
+
+
+@app.post("/api/auth/login")
+def login(data: Credentials, response: Response, db: Session = Depends(get_db)):
+    username = normalize_username(data.username)
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(data.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect username or password.")
+    issue_session(user, response, db)
+    return {"user": {"id": user.id, "username": user.username}}
+
+
+@app.post("/api/auth/logout")
+def logout(request: Request, response: Response, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    token = request.cookies.get(COOKIE_NAME)
+    if token:
+        db.query(LoginSession).filter(LoginSession.token_hash == token_digest(token)).delete(synchronize_session=False)
+        db.commit()
+    response.delete_cookie(COOKIE_NAME, path="/", httponly=True, secure=(ENVIRONMENT == "production"), samesite="lax")
+    return {"ok": True}
+
+
+@app.get("/api/me")
+def me(user: User = Depends(get_current_user)):
+    return {"user": {"id": user.id, "username": user.username}}
+
+
+@app.get("/api/users/search")
+def search_users(q: str = Query(min_length=1, max_length=24), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    term = q.strip().lower()
+    if not term:
+        return {"users": []}
+    users = db.query(User).filter(User.username.contains(term), User.id != user.id).order_by(User.username.asc()).limit(20).all()
+    return {"users": [{"username": item.username} for item in users]}
+
+
+@app.get("/api/conversations")
+def conversations(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.query(Message).filter(
+        or_(Message.sender_id == user.id, Message.recipient_id == user.id)
+    ).order_by(desc(Message.id)).limit(500).all()
+    peers = {}
+    for item in rows:
+        peer_id = item.recipient_id if item.sender_id == user.id else item.sender_id
+        if peer_id not in peers:
+            peer = db.get(User, peer_id)
+            if peer:
+                peers[peer_id] = {
+                    "username": peer.username, "last_message": item.body,
+                    "last_message_at": iso_time(item.created_at), "last_message_id": item.id, "unread": 0,
+                }
+        if item.recipient_id == user.id and item.read_at is None and peer_id in peers:
+            peers[peer_id]["unread"] += 1
+    result = sorted(peers.values(), key=lambda item: item["last_message_id"], reverse=True)
+    return {"conversations": result}
+
+
+@app.get("/api/messages/{username}")
+def get_messages(
+    username: str,
+    after_id: int = Query(default=0, ge=0),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    peer_name = normalize_username(username)
+    peer = db.query(User).filter(User.username == peer_name).first()
+    if not peer:
+        raise HTTPException(status_code=404, detail="User not found.")
+    db.execute(update(Message).where(
+        Message.sender_id == peer.id, Message.recipient_id == user.id, Message.read_at.is_(None),
+    ).values(read_at=datetime.now(timezone.utc)))
+    db.commit()
+    query = db.query(Message).filter(or_(
+        (Message.sender_id == user.id) & (Message.recipient_id == peer.id),
+        (Message.sender_id == peer.id) & (Message.recipient_id == user.id),
+    ))
+    if after_id:
+        rows = query.filter(Message.id > after_id).order_by(Message.id.asc()).limit(100).all()
+    else:
+        rows = list(reversed(query.order_by(desc(Message.id)).limit(100).all()))
+    return {"messages": [message_json(item, user, peer) for item in rows]}
+
+
+@app.post("/api/messages", status_code=201)
+def send_message(data: NewMessage, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    recipient_name = normalize_username(data.recipient)
+    body = data.body.strip()
+    if not body:
+        raise HTTPException(status_code=422, detail="Message cannot be empty.")
+    if len(body) > MESSAGE_MAX:
+        raise HTTPException(status_code=422, detail="Message is too long.")
+    if recipient_name == user.username:
+        raise HTTPException(status_code=422, detail="You cannot message your own account.")
+    recipient = db.query(User).filter(User.username == recipient_name).first()
+    if not recipient:
+        raise HTTPException(status_code=404, detail="User not found.")
+    message = Message(sender_id=user.id, recipient_id=recipient.id, body=body)
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return {"message": message_json(message, user, recipient)}
