@@ -278,7 +278,7 @@ def conversations(user: User = Depends(get_current_user), db: Session = Depends(
             peer = db.get(User, peer_id)
             if peer:
                 peers[peer_id] = {
-                    "username": peer.username, "last_message": item.body,
+                    "username": peer.username, "last_message": item.body or ("📷 Image" if db.query(Attachment).filter(Attachment.message_id == item.id).first() else ""),
                     "last_message_at": iso_time(item.created_at), "last_message_id": item.id, "unread": 0,
                 }
         if item.recipient_id == user.id and item.read_at is None and peer_id in peers:
