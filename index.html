@@ -43,7 +43,7 @@ async function api(path,options){
  const response=await fetch(path,config);let payload={};try{payload=await response.json();}catch(_){}
  if(!response.ok)throw new Error(payload.detail||"Request failed. Please try again.");return payload;
 }
-function showToast(message){$("toast").textContent=message;$("toast").classList.remove("hidden");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.add("hidden"),2600);}
+function clearNode(node){while(node.firstChild)node.removeChild(node.firstChild);}\nfunction showToast(message){$("toast").textContent=message;$("toast").classList.remove("hidden");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.add("hidden"),2600);}
 function showAuth(){$("appView").classList.add("hidden");$("authView").classList.remove("hidden");clearInterval(pollTimer);}
 function showApp(){$("authView").classList.add("hidden");$("appView").classList.remove("hidden");}
 function authMode(){
@@ -72,7 +72,7 @@ function renderWelcome(){
 function initials(username){return String(username||"C").slice(0,1).toUpperCase();}
 function shortTime(value){try{return new Intl.DateTimeFormat(undefined,{hour:"numeric",minute:"2-digit"}).format(new Date(value));}catch(_){return "";}}
 function renderConversations(items){
- const list=$("conversationList");list.replaceChildren();
+ const list=$("conversationList");clearNode(list);
  if(!items.length){const note=document.createElement("div");note.className="muted";note.style.cssText="padding:18px 12px;font-size:13px";note.textContent="No conversations yet. Search for a username above.";list.appendChild(note);return;}
  items.forEach(item=>{
   const button=document.createElement("button");button.type="button";button.className="conversation"+(activeUsername===item.username?" active":"");
@@ -88,7 +88,7 @@ function renderConversations(items){
 }
 async function refreshConversations(){try{const data=await api("/api/conversations");renderConversations(data.conversations||[]);}catch(error){if(error.message.toLowerCase().includes("sign in"))showAuth();}}
 async function searchUsers(){
- const term=$("userSearch").value.trim(),box=$("searchResults");if(!term){box.classList.add("hidden");box.replaceChildren();return;}
+ const term=$("userSearch").value.trim(),box=$("searchResults");if(!term){box.classList.add("hidden");clearNode(box);return;}
  try{const data=await api("/api/users/search?q="+encodeURIComponent(term));box.replaceChildren();
   if(!data.users.length){const empty=document.createElement("div");empty.className="result muted";empty.textContent="No users found";box.appendChild(empty);}
   else data.users.forEach(item=>{const button=document.createElement("button");button.type="button";button.className="result";const label=document.createElement("strong");label.textContent=item.username;const hint=document.createElement("span");hint.className="muted";hint.textContent="Open chat";button.append(label,hint);button.addEventListener("click",()=>{box.classList.add("hidden");$("userSearch").value="";openConversation(item.username);});box.appendChild(button);});
@@ -112,7 +112,7 @@ function renderMessage(item){
 async function loadMessages(appendOnly){
  if(!activeUsername)return;const target=activeUsername;
  try{const data=await api("/api/messages/"+encodeURIComponent(target)+"?after_id="+(appendOnly?lastMessageId:0));if(target!==activeUsername)return;
-  const items=data.messages||[],space=$("messageSpace");if(!appendOnly)space.replaceChildren();
+  const items=data.messages||[],space=$("messageSpace");if(!appendOnly)clearNode(space);
   if(!appendOnly&&!items.length){const empty=document.createElement("div");empty.className="welcome";const symbol=document.createElement("div");symbol.className="welcome-symbol";symbol.textContent="✉";const title=document.createElement("h2");title.textContent="Say hello to "+target;const detail=document.createElement("p");detail.textContent="This is the start of your private conversation.";empty.append(symbol,title,detail);space.appendChild(empty);}
   else{items.forEach(item=>{space.appendChild(renderMessage(item));lastMessageId=Math.max(lastMessageId,item.id);});if(items.length)space.scrollTop=space.scrollHeight;}
  }catch(error){showToast(error.message);}
