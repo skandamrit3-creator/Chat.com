@@ -351,12 +351,12 @@ def send_media(recipient: str = Query(min_length=3, max_length=24), image: Uploa
         limit_mb = 5 if media_type.startswith("image/") else 20
         raise HTTPException(status_code=413, detail=f"File must be {limit_mb} MB or smaller.")
     valid = False
-    if media_type == "image/jpeg": valid = data.startswith(b"\\xff\\xd8\\xff")
-    elif media_type == "image/png": valid = data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+    if media_type == "image/jpeg": valid = data.startswith(b"\xff\xd8\xff")
+    elif media_type == "image/png": valid = data.startswith(b"\x89PNG\r\n\x1a\n")
     elif media_type == "image/gif": valid = data.startswith(b"GIF8")
     elif media_type == "image/webp": valid = data.startswith(b"RIFF") and data[8:12] == b"WEBP"
     elif media_type in ("video/mp4", "video/quicktime"): valid = len(data) >= 12 and data[4:8] == b"ftyp"
-    elif media_type == "video/webm": valid = data.startswith(b"\\x1a\\x45\\xdf\\xa3")
+    elif media_type == "video/webm": valid = data.startswith(b"\x1a\x45\xdf\xa3")
     if not valid:
         raise HTTPException(status_code=415, detail="File content does not match the selected media type.")
     msg = Message(sender_id=user.id, recipient_id=peer.id, body="")
